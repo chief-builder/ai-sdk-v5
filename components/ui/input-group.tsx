@@ -46,9 +46,9 @@ const inputGroupAddonVariants = cva(
         "inline-end":
           "order-last pr-4 has-[>button]:mr-[-0.4rem] has-[>kbd]:mr-[-0.35rem]",
         "block-start":
-          "[.border-b]:pb-4 order-first w-full justify-start px-4 pt-4 group-has-[>input]/input-group:pt-3",
+          "[.border-b]:pb-4 order-first w-full justify-start px-5 pt-4 group-has-[>input]/input-group:pt-3",
         "block-end":
-          "[.border-t]:pt-4 order-last w-full justify-start px-4 pb-4 group-has-[>input]/input-group:pb-3",
+          "[.border-t]:pt-4 order-last w-full justify-start px-5 pb-4 group-has-[>input]/input-group:pb-3",
       },
     },
     defaultVariants: {
