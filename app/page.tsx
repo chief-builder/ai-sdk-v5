@@ -245,7 +245,7 @@ export default function Chat() {
                 value={selectedModel}
                 onValueChange={setSelectedModel}
               >
-                <PromptInputSelectTrigger className="w-auto gap-2 text-base min-h-touch">
+                <PromptInputSelectTrigger>
                   <PromptInputSelectValue />
                 </PromptInputSelectTrigger>
                 <PromptInputSelectContent>
