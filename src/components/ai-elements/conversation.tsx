@@ -28,7 +28,7 @@ export const ConversationContent = ({
   ...props
 }: ConversationContentProps) => (
   <StickToBottom.Content
-    className={cn("flex flex-col gap-8 p-4", className)}
+    className={cn("flex flex-col gap-6 p-6", className)}
     {...props}
   />
 );
@@ -41,26 +41,30 @@ export type ConversationEmptyStateProps = ComponentProps<"div"> & {
 
 export const ConversationEmptyState = ({
   className,
-  title = "No messages yet",
-  description = "Start a conversation to see messages here",
+  title = "Hi! How can I help you today?",
+  description = "Ask me anything about PACE benefits",
   icon,
   children,
   ...props
 }: ConversationEmptyStateProps) => (
   <div
     className={cn(
-      "flex size-full flex-col items-center justify-center gap-3 p-8 text-center",
+      "flex size-full flex-col items-center justify-center gap-6 p-8 text-center",
       className
     )}
     {...props}
   >
     {children ?? (
       <>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
-        <div className="space-y-1">
-          <h3 className="font-medium text-sm">{title}</h3>
+        {icon && (
+          <div className="text-primary p-4 bg-primary/10 rounded-full">
+            {icon}
+          </div>
+        )}
+        <div className="space-y-3">
+          <h2 className="font-display font-semibold text-3xl text-foreground">{title}</h2>
           {description && (
-            <p className="text-muted-foreground text-sm">{description}</p>
+            <p className="text-muted-foreground text-lg max-w-md">{description}</p>
           )}
         </div>
       </>
@@ -84,16 +88,17 @@ export const ConversationScrollButton = ({
     !isAtBottom && (
       <Button
         className={cn(
-          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full",
+          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full shadow-warm-lg min-h-touch-lg min-w-touch-lg",
           className
         )}
         onClick={handleScrollToBottom}
-        size="icon"
+        size="icon-lg"
         type="button"
-        variant="outline"
+        variant="secondary"
         {...props}
       >
-        <ArrowDownIcon className="size-4" />
+        <ArrowDownIcon className="size-6" />
+        <span className="sr-only">Scroll to bottom</span>
       </Button>
     )
   );

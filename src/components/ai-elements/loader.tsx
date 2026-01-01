@@ -5,15 +5,16 @@ type LoaderIconProps = {
   size?: number;
 };
 
-const LoaderIcon = ({ size = 16 }: LoaderIconProps) => (
+const LoaderIcon = ({ size = 24 }: LoaderIconProps) => (
   <svg
     height={size}
     strokeLinejoin="round"
     style={{ color: "currentcolor" }}
     viewBox="0 0 16 16"
     width={size}
+    className="text-primary"
   >
-    <title>Loader</title>
+    <title>Loading</title>
     <g clipPath="url(#clip0_2393_1490)">
       <path d="M8 0V4" stroke="currentColor" strokeWidth="1.5" />
       <path
@@ -81,16 +82,31 @@ const LoaderIcon = ({ size = 16 }: LoaderIconProps) => (
 
 export type LoaderProps = HTMLAttributes<HTMLDivElement> & {
   size?: number;
+  showText?: boolean;
 };
 
-export const Loader = ({ className, size = 16, ...props }: LoaderProps) => (
+export const Loader = ({
+  className,
+  size = 24,
+  showText = true,
+  ...props
+}: LoaderProps) => (
   <div
     className={cn(
-      "inline-flex animate-spin items-center justify-center",
+      "inline-flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/50",
       className
     )}
+    role="status"
+    aria-label="Loading"
     {...props}
   >
-    <LoaderIcon size={size} />
+    <div className="animate-spin">
+      <LoaderIcon size={size} />
+    </div>
+    {showText && (
+      <span className="text-base font-medium text-muted-foreground animate-pulse">
+        Thinking...
+      </span>
+    )}
   </div>
 );

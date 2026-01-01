@@ -30,7 +30,7 @@ export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 export const Message = ({ className, from, ...props }: MessageProps) => (
   <div
     className={cn(
-      "group flex w-full max-w-[95%] flex-col gap-2",
+      "group flex w-full max-w-[85%] flex-col gap-3",
       from === "user" ? "is-user ml-auto justify-end" : "is-assistant",
       className
     )}
@@ -47,9 +47,9 @@ export const MessageContent = ({
 }: MessageContentProps) => (
   <div
     className={cn(
-      "is-user:dark flex w-fit max-w-full min-w-0 flex-col gap-2 overflow-hidden text-sm",
-      "group-[.is-user]:ml-auto group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
-      "group-[.is-assistant]:text-foreground",
+      "flex w-fit max-w-full min-w-0 flex-col gap-3 overflow-hidden text-xl leading-relaxed",
+      "group-[.is-user]:ml-auto group-[.is-user]:rounded-xl group-[.is-user]:bg-secondary group-[.is-user]:border-l-4 group-[.is-user]:border-l-primary group-[.is-user]:px-5 group-[.is-user]:py-4 group-[.is-user]:text-foreground",
+      "group-[.is-assistant]:rounded-xl group-[.is-assistant]:bg-card group-[.is-assistant]:px-6 group-[.is-assistant]:py-5 group-[.is-assistant]:shadow-warm group-[.is-assistant]:text-foreground",
       className
     )}
     {...props}
@@ -65,7 +65,7 @@ export const MessageActions = ({
   children,
   ...props
 }: MessageActionsProps) => (
-  <div className={cn("flex items-center gap-1", className)} {...props}>
+  <div className={cn("flex items-center gap-2 mt-2", className)} {...props}>
     {children}
   </div>
 );
@@ -79,14 +79,15 @@ export const MessageAction = ({
   tooltip,
   children,
   label,
-  variant = "ghost",
-  size = "icon-sm",
+  variant = "secondary",
+  size = "sm",
   ...props
 }: MessageActionProps) => {
   const button = (
-    <Button size={size} type="button" variant={variant} {...props}>
+    <Button size={size} type="button" variant={variant} className="gap-2 min-h-touch" {...props}>
       {children}
-      <span className="sr-only">{label || tooltip}</span>
+      {label && <span className="text-sm">{label}</span>}
+      {!label && tooltip && <span className="sr-only">{tooltip}</span>}
     </Button>
   );
 
@@ -310,7 +311,7 @@ export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "size-full text-xl leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:mb-4 [&_ul]:mb-4 [&_ol]:mb-4 [&_li]:mb-1",
         className
       )}
       {...props}
@@ -438,7 +439,7 @@ export const MessageToolbar = ({
 }: MessageToolbarProps) => (
   <div
     className={cn(
-      "mt-4 flex w-full items-center justify-between gap-4",
+      "mt-5 pt-4 border-t border-border flex w-full items-center justify-between gap-4",
       className
     )}
     {...props}

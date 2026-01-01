@@ -416,13 +416,14 @@ export const PromptInputActionAddAttachments = ({
 
   return (
     <DropdownMenuItem
+      className="min-h-touch py-3 px-4 text-base gap-3"
       {...props}
       onSelect={(e) => {
         e.preventDefault();
         attachments.openFileDialog();
       }}
     >
-      <ImageIcon className="mr-2 size-4" /> {label}
+      <ImageIcon className="size-5" /> {label}
     </DropdownMenuItem>
   );
 };
@@ -819,7 +820,7 @@ export type PromptInputTextareaProps = ComponentProps<
 export const PromptInputTextarea = ({
   onChange,
   className,
-  placeholder = "What would you like to know?",
+  placeholder = "Type your question here...",
   ...props
 }: PromptInputTextareaProps) => {
   const controller = useOptionalPromptInputController();
@@ -900,7 +901,7 @@ export const PromptInputTextarea = ({
 
   return (
     <InputGroupTextarea
-      className={cn("field-sizing-content max-h-48 min-h-16", className)}
+      className={cn("field-sizing-content max-h-64 min-h-20 text-lg", className)}
       name="message"
       onCompositionEnd={() => setIsComposing(false)}
       onCompositionStart={() => setIsComposing(true)}
@@ -989,8 +990,13 @@ export const PromptInputActionMenuTrigger = ({
   ...props
 }: PromptInputActionMenuTriggerProps) => (
   <DropdownMenuTrigger asChild>
-    <PromptInputButton className={className} {...props}>
-      {children ?? <PlusIcon className="size-4" />}
+    <PromptInputButton className={cn("min-h-touch gap-2", className)} {...props}>
+      {children ?? (
+        <>
+          <PaperclipIcon className="size-5" />
+          <span className="text-sm font-medium">Add file</span>
+        </>
+      )}
     </PromptInputButton>
   </DropdownMenuTrigger>
 );
@@ -1025,31 +1031,40 @@ export type PromptInputSubmitProps = ComponentProps<typeof InputGroupButton> & {
 export const PromptInputSubmit = ({
   className,
   variant = "default",
-  size = "icon-sm",
+  size,
   status,
   children,
   ...props
 }: PromptInputSubmitProps) => {
-  let Icon = <CornerDownLeftIcon className="size-4" />;
+  let Icon = <CornerDownLeftIcon className="size-5" />;
+  let label = "Send";
 
   if (status === "submitted") {
-    Icon = <Loader2Icon className="size-4 animate-spin" />;
+    Icon = <Loader2Icon className="size-5 animate-spin" />;
+    label = "Sending...";
   } else if (status === "streaming") {
-    Icon = <SquareIcon className="size-4" />;
+    Icon = <SquareIcon className="size-5" />;
+    label = "Stop";
   } else if (status === "error") {
-    Icon = <XIcon className="size-4" />;
+    Icon = <XIcon className="size-5" />;
+    label = "Error";
   }
 
   return (
     <InputGroupButton
-      aria-label="Submit"
-      className={cn(className)}
+      aria-label={label}
+      className={cn("min-h-touch-lg px-5 gap-2", className)}
       size={size}
       type="submit"
       variant={variant}
       {...props}
     >
-      {children ?? Icon}
+      {children ?? (
+        <>
+          <span className="font-medium">{label}</span>
+          {Icon}
+        </>
+      )}
     </InputGroupButton>
   );
 };
@@ -1060,13 +1075,13 @@ interface SpeechRecognition extends EventTarget {
   lang: string;
   start(): void;
   stop(): void;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
   onresult:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any)
+    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
     | null;
   onerror:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any)
+    | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void)
     | null;
 }
 
@@ -1119,6 +1134,7 @@ export const PromptInputSpeechButton = ({
   className,
   textareaRef,
   onTranscriptionChange,
+  children,
   ...props
 }: PromptInputSpeechButtonProps) => {
   const [isListening, setIsListening] = useState(false);
@@ -1201,7 +1217,7 @@ export const PromptInputSpeechButton = ({
   return (
     <PromptInputButton
       className={cn(
-        "relative transition-all duration-200",
+        "relative transition-all duration-200 min-h-touch gap-2",
         isListening && "animate-pulse bg-accent text-accent-foreground",
         className
       )}
@@ -1209,7 +1225,12 @@ export const PromptInputSpeechButton = ({
       onClick={toggleListening}
       {...props}
     >
-      <MicIcon className="size-4" />
+      {children ?? (
+        <>
+          <MicIcon className="size-5" />
+          <span className="text-sm font-medium">{isListening ? "Listening..." : "Voice"}</span>
+        </>
+      )}
     </PromptInputButton>
   );
 };

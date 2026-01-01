@@ -2,8 +2,8 @@
 
 import { UIMessage, useChat } from "@ai-sdk/react";
 import useSWR from "swr";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { CopyIcon, RefreshCcwIcon, MessageSquareIcon } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { CopyIcon, RefreshCcwIcon, HeartHandshakeIcon } from "lucide-react";
 
 import {
   Conversation,
@@ -116,74 +116,109 @@ export default function Chat() {
 
   const isLoading = status === "submitted" || status === "streaming";
 
+  // Suggested questions for empty state
+  const suggestedQuestions = [
+    "What is PACE?",
+    "Am I eligible for PACE?",
+    "What benefits does PACE cover?",
+    "How do I apply?",
+  ];
+
+  const handleSuggestedQuestion = useCallback(
+    (question: string) => {
+      sendMessage({ text: question }, { body: { threadId } });
+    },
+    [sendMessage, threadId]
+  );
+
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto">
+    <div className="flex flex-col h-screen max-w-4xl mx-auto bg-background">
       <Conversation className="flex-1">
-        <ConversationContent className="px-4 py-6">
+        <ConversationContent className="px-6 py-8">
           {messages.length === 0 ? (
             <ConversationEmptyState
-              title="Start a conversation"
-              description="Ask a question to get started"
-              icon={<MessageSquareIcon className="size-8" />}
-            />
+              title="Hi! How can I help you today?"
+              description="Ask me anything about PACE benefits"
+              icon={<HeartHandshakeIcon className="size-12" />}
+            >
+              <div className="text-primary p-5 bg-primary/10 rounded-full mb-2">
+                <HeartHandshakeIcon className="size-12" />
+              </div>
+              <div className="space-y-3 mb-8">
+                <h2 className="font-display font-semibold text-3xl text-foreground">
+                  Hi! How can I help you today?
+                </h2>
+                <p className="text-muted-foreground text-lg max-w-md">
+                  Ask me anything about PACE benefits
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 max-w-lg">
+                {suggestedQuestions.map((question) => (
+                  <button
+                    key={question}
+                    onClick={() => handleSuggestedQuestion(question)}
+                    className="px-5 py-4 text-left rounded-xl bg-card border-2 border-border hover:border-primary hover:bg-secondary/50 transition-colors text-base font-medium min-h-touch focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+            </ConversationEmptyState>
           ) : (
             messages.map((message) => {
               const text = getMessageText(message);
               const sources = message.role === "assistant" ? extractSources(message) : [];
 
               return (
-                <div key={message.id} className="space-y-2">
+                <div key={message.id}>
                   <Message from={message.role}>
                     <MessageContent>
                       <MessageResponse>{text}</MessageResponse>
+                      {message.role === "assistant" && sources.length > 0 && (
+                        <Sources>
+                          <SourcesTrigger count={sources.length} />
+                          <SourcesContent>
+                            {sources.map((source, idx) => (
+                              <Source
+                                key={idx}
+                                href={source.url}
+                                title={source.title}
+                                index={idx + 1}
+                              />
+                            ))}
+                          </SourcesContent>
+                        </Sources>
+                      )}
+                      {message.role === "assistant" && (
+                        <MessageActions>
+                          <MessageAction
+                            label="Copy"
+                            tooltip="Copy response"
+                            onClick={() => handleCopy(text)}
+                          >
+                            <CopyIcon className="size-4" />
+                          </MessageAction>
+                          <MessageAction
+                            label="Retry"
+                            tooltip="Regenerate response"
+                            onClick={handleRetry}
+                          >
+                            <RefreshCcwIcon className="size-4" />
+                          </MessageAction>
+                        </MessageActions>
+                      )}
                     </MessageContent>
-                    {message.role === "assistant" && (
-                      <MessageActions>
-                        <MessageAction
-                          tooltip="Copy"
-                          onClick={() => handleCopy(text)}
-                        >
-                          <CopyIcon className="size-3.5" />
-                        </MessageAction>
-                        <MessageAction
-                          tooltip="Retry"
-                          onClick={handleRetry}
-                        >
-                          <RefreshCcwIcon className="size-3.5" />
-                        </MessageAction>
-                      </MessageActions>
-                    )}
                   </Message>
-
-                  {sources.length > 0 && (
-                    <Sources className="ml-0">
-                      <SourcesTrigger count={sources.length} />
-                      <SourcesContent>
-                        {sources.map((source, idx) => (
-                          <Source
-                            key={idx}
-                            href={source.url}
-                            title={source.title}
-                          />
-                        ))}
-                      </SourcesContent>
-                    </Sources>
-                  )}
                 </div>
               );
             })
           )}
-          {isLoading && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader size={16} />
-              <span className="text-sm">Thinking...</span>
-            </div>
-          )}
+          {isLoading && <Loader size={24} />}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="border-t bg-background p-4">
+      <div className="border-t-2 border-border bg-card p-6">
         <PromptInput onSubmit={handleSubmit} globalDrop multiple>
           <PromptInputHeader>
             <PromptInputAttachments>
@@ -194,7 +229,7 @@ export default function Chat() {
           </PromptInputHeader>
           <PromptInputBody>
             <PromptInputTextarea
-              placeholder="Ask a question..."
+              placeholder="Type your question here..."
               disabled={isLoading}
             />
           </PromptInputBody>
@@ -210,12 +245,12 @@ export default function Chat() {
                 value={selectedModel}
                 onValueChange={setSelectedModel}
               >
-                <PromptInputSelectTrigger className="w-auto gap-1 text-xs">
+                <PromptInputSelectTrigger className="w-auto gap-2 text-base min-h-touch">
                   <PromptInputSelectValue />
                 </PromptInputSelectTrigger>
                 <PromptInputSelectContent>
                   {models.map((model) => (
-                    <PromptInputSelectItem key={model.id} value={model.id}>
+                    <PromptInputSelectItem key={model.id} value={model.id} className="py-3 text-base">
                       {model.name}
                     </PromptInputSelectItem>
                   ))}
