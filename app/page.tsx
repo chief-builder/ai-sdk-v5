@@ -3,7 +3,7 @@
 import { UIMessage, useChat } from "@ai-sdk/react";
 import useSWR from "swr";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CopyIcon, RefreshCcwIcon, HeartHandshakeIcon } from "lucide-react";
+import { CopyIcon, CheckIcon, RefreshCcwIcon, HeartHandshakeIcon } from "lucide-react";
 
 import {
   Conversation,
@@ -55,20 +55,41 @@ const models = [
   { id: "anthropic/claude-3-haiku", name: "Claude 3 Haiku" },
 ];
 
-// Extract sources from message parts (AI SDK v5 uses source-url parts)
+// Extract sources from message parts and inline citations
 type SourceItem = { title: string; url: string };
 
 function extractSources(message: UIMessage): SourceItem[] {
   const sources: SourceItem[] = [];
+  const seenTitles = new Set<string>();
+
+  // Check for source-url parts (AI SDK v5 format)
   message.parts.forEach((part) => {
     if (part.type === "source-url") {
       const sourcePart = part as { type: "source-url"; url: string; title?: string };
-      sources.push({
-        title: sourcePart.title || sourcePart.url,
-        url: sourcePart.url,
-      });
+      const title = sourcePart.title || sourcePart.url;
+      if (!seenTitles.has(title)) {
+        seenTitles.add(title);
+        sources.push({ title, url: sourcePart.url });
+      }
     }
   });
+
+  // Also parse inline [Source: filename] citations from text
+  const text = message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => (part as { type: "text"; text: string }).text)
+    .join("");
+
+  const sourceRegex = /\[Source:\s*([^\]]+)\]/g;
+  let match;
+  while ((match = sourceRegex.exec(text)) !== null) {
+    const filename = match[1].trim();
+    if (!seenTitles.has(filename)) {
+      seenTitles.add(filename);
+      sources.push({ title: filename, url: "#" });
+    }
+  }
+
   return sources;
 }
 
@@ -83,6 +104,7 @@ function getMessageText(message: UIMessage): string {
 export default function Chat() {
   const threadId = useRef(crypto.randomUUID()).current;
   const [selectedModel, setSelectedModel] = useState(models[0].id);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { data: initialMessages = [] } = useSWR<UIMessage[]>(
     `/api/initial-chat?threadId=${threadId}`,
@@ -106,8 +128,10 @@ export default function Chat() {
     [sendMessage, threadId]
   );
 
-  const handleCopy = useCallback((text: string) => {
+  const handleCopy = useCallback((text: string, messageId: string) => {
     navigator.clipboard.writeText(text);
+    setCopiedId(messageId);
+    setTimeout(() => setCopiedId(null), 2000);
   }, []);
 
   const handleRetry = useCallback(() => {
@@ -139,25 +163,25 @@ export default function Chat() {
             <ConversationEmptyState
               title="Hi! How can I help you today?"
               description="Ask me anything about PACE benefits"
-              icon={<HeartHandshakeIcon className="size-12" />}
+              icon={<HeartHandshakeIcon className="size-10" />}
             >
-              <div className="text-primary p-5 bg-primary/10 rounded-full mb-2">
-                <HeartHandshakeIcon className="size-12" />
+              <div className="text-primary p-4 bg-primary/10 rounded-full mb-1">
+                <HeartHandshakeIcon className="size-10" />
               </div>
-              <div className="space-y-3 mb-8">
-                <h2 className="font-display font-semibold text-3xl text-foreground">
+              <div className="space-y-2 mb-4">
+                <h2 className="font-display font-semibold text-2xl text-foreground">
                   Hi! How can I help you today?
                 </h2>
-                <p className="text-muted-foreground text-lg max-w-md">
+                <p className="text-muted-foreground text-base max-w-md">
                   Ask me anything about PACE benefits
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 max-w-lg">
+              <div className="grid grid-cols-2 gap-2 max-w-lg w-full">
                 {suggestedQuestions.map((question) => (
                   <button
                     key={question}
                     onClick={() => handleSuggestedQuestion(question)}
-                    className="px-5 py-4 text-left rounded-xl bg-card border-2 border-border hover:border-primary hover:bg-secondary/50 transition-colors text-base font-medium min-h-touch focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="px-4 py-3 text-left rounded-lg bg-card border-2 border-border hover:border-primary hover:bg-secondary/50 transition-colors text-sm font-medium min-h-touch focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     {question}
                   </button>
@@ -192,11 +216,15 @@ export default function Chat() {
                       {message.role === "assistant" && (
                         <MessageActions>
                           <MessageAction
-                            label="Copy"
-                            tooltip="Copy response"
-                            onClick={() => handleCopy(text)}
+                            label={copiedId === message.id ? "Copied!" : "Copy"}
+                            tooltip={copiedId === message.id ? "Copied to clipboard" : "Copy response"}
+                            onClick={() => handleCopy(text, message.id)}
                           >
-                            <CopyIcon className="size-4" />
+                            {copiedId === message.id ? (
+                              <CheckIcon className="size-4 text-green-500" />
+                            ) : (
+                              <CopyIcon className="size-4" />
+                            )}
                           </MessageAction>
                           <MessageAction
                             label="Retry"
