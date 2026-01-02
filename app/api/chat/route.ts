@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   const aiSdkStream = toAISdkStream(stream, {
     from: "agent",
-    sendReasoning: true,
+    sendReasoning: false, // Disabled to prevent repetitive "Let me search..." text
     sendSources: true,
   });
 
