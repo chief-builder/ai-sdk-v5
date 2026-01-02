@@ -1,94 +1,124 @@
-# Mastra + AI SDK v5 Example
+# PA Medicaid Benefits Assistant
 
-This example demonstrates how to integrate [Mastra](https://mastra.ai) with [AI SDK v5](https://sdk.vercel.ai/) in a Next.js application. It showcases a weather agent with real-time chat capabilities, persistent memory, and tool integration.
+A helpful assistant for Pennsylvania state (PA) Medicaid-related information including PACE, PACENET, LIFE programs, estate recovery, and eligibility requirements. Built with [Mastra](https://mastra.ai) and [AI SDK v5](https://sdk.vercel.ai/).
 
 ## Features
 
-- **Real-time Chat Interface**: Uses AI SDK v5's `useChat` hook for streaming conversations
-- **Weather Agent**: Intelligent agent powered by OpenAI's GPT-4o that provides weather information
-- **Tool Integration**: Custom weather tool that fetches real-time data from Open-Meteo API
+- **RAG-Powered Knowledge Base**: Vector search over PA Medicaid documents with relevance scoring
+- **Real-time Streaming Chat**: AI SDK v5's `useChat` hook for smooth conversations
+- **Source Citations**: Inline citations with expandable sources accordion
+- **Senior-Friendly UI**: Large fonts (18-20px), high contrast, 44px+ touch targets
 - **Persistent Memory**: Conversation history stored using LibSQL with Mastra Memory
-- **Modern UI**: Clean chat interface built with Tailwind CSS
-- **Full-stack Setup**: Complete Next.js application with API routes
+- **Suggested Questions**: Quick-start cards for common queries
+- **Copy & Retry Actions**: Easy message interaction buttons
+- **Model Selector**: Choose between Mimo v2 Flash, Gemini Flash, or Claude Haiku
 
-## What You'll Learn
+## Tech Stack
 
-- How to set up Mastra agents with AI SDK v5 compatibility
-- Creating custom tools for external API integration
-- Implementing persistent conversation memory
-- Building streaming chat interfaces with Next.js
-- Integrating Mastra with modern React patterns
+- **Framework**: Next.js 15 with React 19
+- **AI**: Mastra (agents, RAG, memory) + AI SDK v5 + OpenRouter
+- **RAG**: LibSQL vector database + FastEmbed embeddings
+- **Memory**: LibSQL persistent storage
+- **Styling**: Tailwind CSS with senior-friendly theme
+- **UI Components**: Radix UI + shadcn/ui
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
-- npm
+- pnpm
 
 ### Installation
 
 1. Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
-2. Start the development server:
-
-```bash
-npm run dev
-```
-
-3. Open [http://localhost:3000](http://localhost:3000) to see the chat interface
-
-### Environment Setup
-
-The example uses OpenAI's GPT-4o model. Make sure to set your OpenAI API key:
+2. Set up environment variables:
 
 ```bash
 # Create a .env.local file
-echo "OPENAI_API_KEY=your_openai_api_key_here" > .env.local
+echo "OPENROUTER_API_KEY=your_key_here" > .env.local
 ```
 
-## How It Works
+3. Start the development server:
 
-### Mastra Configuration
+```bash
+pnpm dev
+```
 
-The application is configured with a weather agent that:
+4. Open [http://localhost:3000](http://localhost:3000) to see the chat interface
 
-- Uses OpenAI's GPT-4o model for natural language processing
-- Has access to a weather tool for fetching real-time weather data
-- Maintains conversation memory using LibSQL storage
-- Provides helpful, conversational weather assistance
+## Project Structure
 
-### AI SDK v5 Integration
+```
+app/
+  api/chat/         # Streaming chat endpoint
+  api/initial-chat/ # Load conversation history
+  page.tsx          # Chat UI with AI Elements components
+src/
+  mastra/
+    agents/         # RAG agent configuration
+    tools/          # Vector search tool
+    index.ts        # Mastra config
+  components/
+    ai-elements/    # Chat UI components (conversation, message, prompt-input, sources)
+    ui/             # Base shadcn/ui components
+data/
+  rag_vectors.db    # Vector database with PA Medicaid documents
+```
 
-The example shows how to:
+## Usage Examples
 
-- Use Mastra agents with AI SDK v5's streaming responses
-- Convert Mastra's streaming format to AI SDK v5 compatible streams
-- Maintain conversation state across requests
-- Load initial conversation history from Mastra Memory
+Ask the assistant questions about PA Medicaid programs:
 
-### Key Components
+- "What is PACE?"
+- "Am I eligible for PACE?"
+- "What benefits does PACE cover?"
+- "What are the income limits for Medicaid?"
+- "What happens to my house when I die?" (estate recovery)
+- "How do I apply for Medicaid?"
+- "What's the difference between PACE and PACENET?"
 
-- **`/app/page.tsx`**: React chat interface using `useChat` hook
-- **`/app/api/chat/route.ts`**: Streaming chat endpoint with Mastra agent
-- **`/app/api/initial-chat/route.ts`**: Loads conversation history from memory
-- **`/src/mastra/`**: Mastra configuration, agents, and tools
+The assistant searches the knowledge base and provides answers with source citations.
 
-## Try It Out
+## Knowledge Base
 
-Ask the weather agent questions like:
+The RAG knowledge base includes:
 
-- "What's the weather in San Francisco?"
-- "How's the weather in Tokyo today?"
-- "Tell me about the conditions in London"
+- PA DHS (Department of Human Services) documents
+- PACE/PACENET program guides
+- Estate recovery FAQs
+- Eligibility requirements
+- Application procedures
 
-The agent will use its weather tool to fetch real-time data and provide detailed weather information including temperature, humidity, wind conditions, and more.
+Sources are displayed with relevance scores and can be expanded for reference.
+
+## Development Commands
+
+```bash
+pnpm dev          # Start dev server (Turbopack)
+pnpm build        # Production build
+pnpm lint         # Run ESLint
+pnpm mastra-dev   # Start Mastra dev server
+```
+
+## Issue Tracking
+
+This project uses **bd (beads)** for issue tracking:
+
+```bash
+bd ready          # Find unblocked work
+bd create "Title" # Create new issue
+bd close <id>     # Complete work
+bd sync           # Sync with git
+```
 
 ## Learn More
 
-- [Mastra Documentation](https://mastra.ai/docs) - Learn about Mastra's features and capabilities
+- [Mastra Documentation](https://mastra.ai/docs) - Learn about Mastra's RAG and agent features
 - [AI SDK Documentation](https://sdk.vercel.ai) - Explore AI SDK v5 features
+- [OpenRouter](https://openrouter.ai) - Multi-model API provider
