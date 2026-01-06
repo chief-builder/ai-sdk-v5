@@ -47,6 +47,27 @@
 
 #### Detailed RAG Test Results
 
+##### How Vector Search Works
+
+The RAG agent uses `vectorSearchTool` to query the embedded knowledge base:
+
+1. **Query Transformation**: Agent reformulates user question into an optimized search query
+2. **Embedding**: Query is converted to a vector using the embedding model
+3. **Similarity Search**: Top K most similar document chunks are retrieved
+4. **Context Assembly**: Retrieved chunks are concatenated (max 4000 chars) with source attribution
+5. **Response Generation**: Agent synthesizes answer from context
+
+**Tool Output Structure:**
+```json
+{
+  "context": "Concatenated text from matching documents with source headers",
+  "resultCount": 10,
+  "sources": [
+    {"filename": "doc.md", "title": "Document Title", "section": "Page 1", "score": 0.82}
+  ]
+}
+```
+
 ---
 
 **Test 3.1: Eligibility Question**
@@ -67,6 +88,8 @@
 }
 ```
 
+*Note: Agent reformulated "Am I eligible for PA Medicaid?" → "PA Medicaid eligibility requirements" for better semantic matching.*
+
 **Sources Retrieved (Top 5):**
 
 | Source | Score | Section |
@@ -77,13 +100,78 @@
 | PHLP-CHC-Waiver-Eligibility-Guide.pdf | 0.782 | Page 6 |
 | PA-PACE-PACENET-Provider-Guide-2025.pdf | 0.772 | Page 6 |
 
-**Response Summary:**
-The agent provided a comprehensive answer including:
-- Who is eligible (ages 65+, disabilities, blind)
-- Non-financial requirements (citizenship, residency, SSN)
-- Income limits tables for NMP and MNO categories
-- Warning about 5-year asset transfer lookback
-- Application methods (COMPASS, County Assistance Office)
+**Context Retrieved (excerpt):**
+```
+Source: [PA-DHS-Healthy-Horizons.md: Document: PA-DHS-Healthy-Horizons.pdf] (Page 1)
+Score: 0.8164
+
+Medicaid for Older People and People with Disabilities
+Pennsylvania's Medical Assistance (Medicaid) program provides health care benefits
+for older people (ages 65 and older), people with disabilities, or people who are blind.
+
+Non-Money Payment (NMP)
+| Number of People | NMP Categories Net Monthly Income Limit |
+| 1                | $9,891.10                               |
+| 2                | $1,483.30                               |
+
+---
+Source: [PA-DHS-Long-Term-Care.md: Document: PA-DHS-Long-Term-Care.pdf] (Page 1)
+Score: 0.7876
+
+Non-Financial Eligibility
+A person must:
+• Have a medical need for long-term care services
+• Be a U.S. citizen or a qualified non-citizen
+• Be a resident of Pennsylvania
+• Have a social security number
+
+Financial Eligibility
+The financial eligibility factors are:
+• Income
+• Resources
+```
+
+**Actual Response:**
+
+> To be eligible for Pennsylvania Medicaid, here are some general requirements:
+>
+> ### Who is Eligible?
+> *   Older adults (ages 65 and older)
+> *   People with disabilities
+> *   People who are blind
+>
+> ### Non-Financial Requirements
+> *   Must have a medical need for long-term care services (if applying for long-term care)
+> *   Must be a U.S. citizen or a qualified non-citizen
+> *   Must be a resident of Pennsylvania
+> *   Must have a Social Security number
+>
+> ### Income Limits
+>
+> Pennsylvania Medicaid has different income limits depending on the category:
+>
+> **Non-Money Payment (NMP)**
+>
+> | Number of People | NMP Categories Net Monthly Income Limit |
+> | ---------------- | --------------------------------------- |
+> | 1                | **$9,891.10**                           |
+> | 2                | **$1,483.30**                           |
+>
+> **Medically Needy Only (MNO)**
+>
+> | Number of People | MNO Categories Net Monthly Income Limits | MNO Categories Net 6-Month Income Limits |
+> | ---------------- | ---------------------------------------- | ----------------------------------------- |
+> | 1                | **$425**                                 | **$2,550**                                |
+> | 2                | **$442**                                 | **$2,650**                                |
+> | 3                | **$467**                                 | **$2,800**                                |
+> | 4                | **$567**                                 | **$3,400**                                |
+> | 5                | **$675**                                 | **$4,050**                                |
+>
+> 📌 **Good to Know**: Most income is counted when determining financial eligibility. Transferring assets for less than fair market value within 5 years of applying for Medicaid LTC services can affect eligibility.
+>
+> You can apply for Medicaid online through COMPASS, or by mailing/giving your application to your local County Assistance Office. They will determine your eligibility.
+>
+> *Sources: PA-DHS-Healthy-Horizons.pdf, PA-DHS-Long-Term-Care.pdf*
 
 **Interpretation:**
 ✓ RAG successfully retrieved relevant eligibility documents with high similarity scores (0.75-0.82).
@@ -111,6 +199,8 @@ The agent provided a comprehensive answer including:
 }
 ```
 
+*Note: Agent reformulated "What benefits does PA Medicaid cover?" → "PA Medicaid covered benefits" for keyword optimization.*
+
 **Sources Retrieved (Top 5):**
 
 | Source | Score | Section |
@@ -121,11 +211,44 @@ The agent provided a comprehensive answer including:
 | PHLP-2025-Income-Limits.pdf | 0.786 | Page 1 |
 | PA-DHS-Healthy-Horizons.pdf | 0.763 | Page 2 |
 
-**Response Summary:**
-The agent acknowledged partial information availability and provided:
-- Overview of who Medicaid serves (65+, disabilities, blind)
-- Explanation of how Medicare and Medicaid work together
-- Source attribution explaining which documents informed the answer
+**Context Retrieved (excerpt):**
+```
+Source: [PA-DHS-Healthy-Horizons.md: Document: PA-DHS-Healthy-Horizons.pdf] (Page 1)
+Score: 0.8036
+
+Medicaid for Older People and People with Disabilities
+Pennsylvania's Medical Assistance (Medicaid) program provides health care benefits
+for older people (ages 65 and older), people with disabilities, or people who are blind.
+Information on this page describes general eligibility requirements and benefits
+
+---
+Source: [PHLP-Using-Medicare-Medicaid-Guide.md] (Page 2)
+Score: 0.7904
+
+There are two ways to get your Medicare coverage:
+1. Original Medicare: You can use your red, white, and blue Medicare card which
+   includes Medicare Part A (hospital coverage) and Medicare Part B (outpatient
+   medical coverage) and enroll in a standalone Part D (drug coverage) plan.
+2. Medicare Advantage Plan: You can enroll in a Medicare Advantage plan that
+   includes Part A, Part B and Part D.
+
+Since Medicare is your primary insurance, you need to see healthcare providers
+who accept either original Medicare or your Medicare Advantage plan.
+```
+
+*Observation: The knowledge base contains eligibility-focused documents but lacks detailed benefits/coverage lists. This explains the agent's honest "partial answer" response.*
+
+**Actual Response:**
+
+> I found some information that may help, but I don't have a complete answer to your question.
+>
+> Pennsylvania's Medical Assistance (Medicaid) program provides health care benefits for older people (ages 65 and older), people with disabilities, or people who are blind.
+>
+> *Sources: PA-DHS-Healthy-Horizons.pdf, PHLP-Using-Medicare-Medicaid-Guide.pdf*
+>
+> **How I Used the Sources**
+> - I used the first document to provide an overview of Pennsylvania's Medical Assistance (Medicaid) program and who it serves.
+> - I used the second document to explain how Medicare and Medicaid work together.
 
 **Interpretation:**
 ✓ RAG retrieved relevant documents but knowledge base has limited explicit benefits coverage details.
@@ -148,8 +271,23 @@ The agent acknowledged partial information availability and provided:
 
 **Vector Search Tool Call:** None (agent did not invoke tool)
 
-**Response:**
-> "I am designed to provide information about Pennsylvania Medicaid for seniors. I cannot answer general knowledge questions. I'm happy to help with any questions about eligibility, benefits, enrollment, or services available to you."
+*Analysis: The agent's system prompt defines its scope as "Pennsylvania Medicaid for seniors." When it detects an off-topic query, it bypasses the vector search entirely rather than wasting resources searching for irrelevant content. This is efficient behavior - no embedding computation, no similarity search, no context assembly.*
+
+**Streaming Response Events:**
+```
+data: {"type":"start-step"}
+data: {"type":"text-start","id":"txt-0"}
+data: {"type":"text-delta","id":"txt-0","delta":"I am designed..."}
+data: {"type":"text-end","id":"txt-0"}
+data: {"type":"finish-step"}
+data: [DONE]
+```
+
+*Note: Only one step (text generation) vs. two steps for RAG queries (tool call + text generation).*
+
+**Actual Response:**
+
+> I am designed to provide information about Pennsylvania Medicaid for seniors. I cannot answer general knowledge questions. I'm happy to help with any questions about eligibility, benefits, enrollment, or services available to you.
 
 **Interpretation:**
 ✓ Agent correctly identified query as off-topic without searching the knowledge base.
@@ -157,6 +295,7 @@ The agent acknowledged partial information availability and provided:
 ✓ No hallucination or attempt to answer outside its scope.
 ✓ Response size: 599 bytes (minimal, appropriate for redirect).
 ✓ Demonstrates proper system prompt adherence for scope boundaries.
+✓ Efficient resource usage - skipped unnecessary vector search.
 
 ### 4. Initial Chat Tests (4/4 passed)
 
