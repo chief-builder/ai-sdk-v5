@@ -128,6 +128,19 @@
   }
 }
 
+/* Markdown table styling - ensure tables can scroll horizontally */
+@layer components {
+  /* Streamdown table wrapper - ensure full width and scrollable */
+  [data-streamdown="table-wrapper"] {
+    @apply w-full max-w-full;
+  }
+
+  /* Override Streamdown's default table width to fit content */
+  [data-streamdown="table"] {
+    @apply min-w-full w-max;
+  }
+}
+
 /* Senior-friendly utility classes */
 @layer utilities {
   /* Large, readable text for responses */
