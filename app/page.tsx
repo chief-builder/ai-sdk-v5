@@ -57,11 +57,11 @@ import { Loader } from "@/src/components/ai-elements/loader";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Model options for the selector
+// Note: Only Gemini 2.0 Flash is enabled - other free models don't reliably support
+// tool calling in streaming mode via OpenRouter. The prompt infrastructure supports
+// multiple models when they become available (see src/mastra/prompts/).
 const models = [
   { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash" },
-  { id: "z-ai/glm-4.5-air:free", name: "GLM 4.5 Air" },
-  { id: "nvidia/nemotron-3-nano-30b-a3b:free", name: "Nemotron 3 Nano" },
-  { id: "anthropic/claude-3-haiku", name: "Claude 3 Haiku" },
 ];
 
 // Extract sources from message parts and inline citations
