@@ -4,6 +4,9 @@ import { UIMessage, useChat } from "@ai-sdk/react";
 import useSWR from "swr";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { CopyIcon, CheckIcon, RefreshCcwIcon, HeartHandshakeIcon } from "lucide-react";
+import { AppHeader } from "@/src/components/app-header";
+import { LeftSidebar } from "@/src/components/left-sidebar";
+import { RightSidebar } from "@/src/components/right-sidebar";
 
 import {
   Conversation,
@@ -44,48 +47,78 @@ import {
   SourcesContent,
   Source,
 } from "@/src/components/ai-elements/sources";
+import {
+  Reasoning,
+  ReasoningTrigger,
+  ReasoningContent,
+} from "@/src/components/ai-elements/reasoning";
 import { Loader } from "@/src/components/ai-elements/loader";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-// Model options for the selector (UI-only for now)
+// Model options for the selector
 const models = [
-  { id: "xiaomi/mimo-v2-flash:free", name: "Mimo v2 Flash" },
-  { id: "google/gemini-flash-1.5", name: "Gemini Flash 1.5" },
+  { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash" },
+  { id: "z-ai/glm-4.5-air:free", name: "GLM 4.5 Air" },
+  { id: "nvidia/nemotron-3-nano-30b-a3b:free", name: "Nemotron 3 Nano" },
   { id: "anthropic/claude-3-haiku", name: "Claude 3 Haiku" },
 ];
 
 // Extract sources from message parts and inline citations
 type SourceItem = { title: string; url: string };
 
+// Regex patterns for parsing sources - flexible to handle various whitespace/newline patterns
+const SOURCES_BLOCK_PATTERN = /<sources>[\s\S]*?<\/sources>/gi;
+const SOURCES_JSON_PATTERN = /<sources>\s*```json\s*([\s\S]*?)```\s*<\/sources>/gi;
+const INLINE_SOURCE_PATTERN = /\[Source:\s*([^\]]+)\]/g;
+const HOW_I_USED_PATTERN = /\*\*How I Used the Sources\*\*[\s\S]*?(?=\n\n|$)/gi;
+
 function extractSources(message: UIMessage): SourceItem[] {
   const sources: SourceItem[] = [];
-  const seenTitles = new Set<string>();
+  const seenUrls = new Set<string>();
 
   // Check for source-url parts (AI SDK v5 format)
   message.parts.forEach((part) => {
     if (part.type === "source-url") {
       const sourcePart = part as { type: "source-url"; url: string; title?: string };
-      const title = sourcePart.title || sourcePart.url;
-      if (!seenTitles.has(title)) {
-        seenTitles.add(title);
-        sources.push({ title, url: sourcePart.url });
+      if (!seenUrls.has(sourcePart.url)) {
+        seenUrls.add(sourcePart.url);
+        sources.push({ title: sourcePart.title || sourcePart.url, url: sourcePart.url });
       }
     }
   });
 
-  // Also parse inline [Source: filename] citations from text
+  // Get full text content
   const text = message.parts
     .filter((part) => part.type === "text")
     .map((part) => (part as { type: "text"; text: string }).text)
     .join("");
 
-  const sourceRegex = /\[Source:\s*([^\]]+)\]/g;
-  let match;
-  while ((match = sourceRegex.exec(text)) !== null) {
+  // Parse <sources>```json[...]```</sources> blocks (new prompt format)
+  const blockMatches = text.matchAll(new RegExp(SOURCES_JSON_PATTERN.source, "gi"));
+  for (const blockMatch of blockMatches) {
+    try {
+      const jsonStr = blockMatch[1].trim();
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) {
+        for (const src of parsed) {
+          if (src.url && !seenUrls.has(src.url)) {
+            seenUrls.add(src.url);
+            sources.push({ title: src.title || src.url, url: src.url });
+          }
+        }
+      }
+    } catch {
+      // JSON parsing failed, ignore this block
+    }
+  }
+
+  // Fallback: parse inline [Source: filename] citations from text
+  const inlineMatches = text.matchAll(new RegExp(INLINE_SOURCE_PATTERN.source, "g"));
+  for (const match of inlineMatches) {
     const filename = match[1].trim();
-    if (!seenTitles.has(filename)) {
-      seenTitles.add(filename);
+    if (!seenUrls.has(filename)) {
+      seenUrls.add(filename);
       sources.push({ title: filename, url: "#" });
     }
   }
@@ -93,12 +126,71 @@ function extractSources(message: UIMessage): SourceItem[] {
   return sources;
 }
 
-// Get text content from message parts
-function getMessageText(message: UIMessage): string {
-  return message.parts
+// Strip sources blocks from displayed text (handles both complete and incomplete/streaming blocks)
+function stripSourcesFromText(text: string): string {
+  return text
+    // Remove complete <sources>...</sources> blocks
+    .replace(new RegExp(SOURCES_BLOCK_PATTERN.source, "gi"), "")
+    // Remove incomplete/streaming <sources> blocks (tag started but not closed yet)
+    .replace(/<sources>[\s\S]*$/gi, "")
+    // Remove any standalone <sources> or </sources> tags that might remain
+    .replace(/<\/?sources>/gi, "")
+    .replace(new RegExp(HOW_I_USED_PATTERN.source, "gi"), "")
+    .trim();
+}
+
+// Get text content from message parts (with sources stripped for display)
+function getMessageText(message: UIMessage, stripSources: boolean = true): string {
+  const text = message.parts
     .filter((part) => part.type === "text")
     .map((part) => (part as { type: "text"; text: string }).text)
     .join("");
+
+  return stripSources ? stripSourcesFromText(text) : text;
+}
+
+// Extract reasoning content from message parts
+type ReasoningItem = { text: string; toolCalls?: { name: string; input: string }[] };
+
+function extractReasoning(message: UIMessage): ReasoningItem | null {
+  const reasoningParts: string[] = [];
+  const toolCalls: { name: string; input: string }[] = [];
+
+  message.parts.forEach((part) => {
+    // Handle reasoning parts (AI SDK v5 format)
+    if (part.type === "reasoning") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const reasoningPart = part as any;
+      const text = reasoningPart.reasoning || reasoningPart.text || "";
+      if (text) {
+        reasoningParts.push(text);
+      }
+    }
+    // Handle tool invocations to show what the model searched for
+    if (part.type.startsWith("tool-")) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const toolPart = part as any;
+      // AI SDK v5 tool parts have input directly on the part
+      const toolName = toolPart.toolName;
+      const input = toolPart.input;
+      if (toolName === "vectorSearchTool" && input?.query) {
+        toolCalls.push({
+          name: "Search",
+          input: input.query as string
+        });
+      }
+    }
+  });
+
+  // Return reasoning if we have any content
+  if (reasoningParts.length > 0 || toolCalls.length > 0) {
+    return {
+      text: reasoningParts.join("\n"),
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+    };
+  }
+
+  return null;
 }
 
 export default function Chat() {
@@ -122,10 +214,10 @@ export default function Chat() {
   const handleSubmit = useCallback(
     (data: { text: string; files: unknown[] }) => {
       if (data.text.trim()) {
-        sendMessage({ text: data.text }, { body: { threadId } });
+        sendMessage({ text: data.text }, { body: { threadId, model: selectedModel } });
       }
     },
-    [sendMessage, threadId]
+    [sendMessage, threadId, selectedModel]
   );
 
   const handleCopy = useCallback((text: string, messageId: string) => {
@@ -135,34 +227,38 @@ export default function Chat() {
   }, []);
 
   const handleRetry = useCallback(() => {
-    regenerate({ body: { threadId } });
-  }, [regenerate, threadId]);
+    regenerate({ body: { threadId, model: selectedModel } });
+  }, [regenerate, threadId, selectedModel]);
 
   const isLoading = status === "submitted" || status === "streaming";
 
   // Suggested questions for empty state
   const suggestedQuestions = [
-    "What is PACE?",
-    "Am I eligible for PACE?",
-    "What benefits does PACE cover?",
-    "How do I apply?",
+    "Am I eligible for PA Medicaid?",
+    "What benefits does PA Medicaid cover?",
+    "What documents do I need to apply?",
+    "How do I apply for Medicaid in PA?",
   ];
 
   const handleSuggestedQuestion = useCallback(
     (question: string) => {
-      sendMessage({ text: question }, { body: { threadId } });
+      sendMessage({ text: question }, { body: { threadId, model: selectedModel } });
     },
-    [sendMessage, threadId]
+    [sendMessage, threadId, selectedModel]
   );
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto bg-background">
-      <Conversation className="flex-1">
+    <div className="flex flex-col h-screen bg-background">
+      <AppHeader />
+      <div className="flex flex-1 overflow-hidden">
+        <LeftSidebar onQuickAction={handleSuggestedQuestion} />
+        <div className="flex flex-col flex-1 min-w-0">
+          <Conversation className="flex-1">
         <ConversationContent className="px-6 py-8">
           {messages.length === 0 ? (
             <ConversationEmptyState
-              title="Hi! How can I help you today?"
-              description="Ask me anything about PACE benefits"
+              title="Welcome to PA Medicaid Helper"
+              description="I'm here to help you understand Pennsylvania Medicaid, check your eligibility, and guide you through the application process."
               icon={<HeartHandshakeIcon className="size-10" />}
             >
               <div className="text-primary p-4 bg-primary/10 rounded-full mb-1">
@@ -170,10 +266,10 @@ export default function Chat() {
               </div>
               <div className="space-y-2 mb-4">
                 <h2 className="font-display font-semibold text-2xl text-foreground">
-                  Hi! How can I help you today?
+                  Welcome to PA Medicaid Helper
                 </h2>
                 <p className="text-muted-foreground text-base max-w-md">
-                  Ask me anything about PACE benefits
+                  I&apos;m here to help you understand Pennsylvania Medicaid, check your eligibility, and guide you through the application process.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 max-w-lg w-full">
@@ -192,11 +288,33 @@ export default function Chat() {
             messages.map((message) => {
               const text = getMessageText(message);
               const sources = message.role === "assistant" ? extractSources(message) : [];
+              const reasoning = message.role === "assistant" ? extractReasoning(message) : null;
 
               return (
                 <div key={message.id}>
                   <Message from={message.role}>
                     <MessageContent>
+                      {/* Show reasoning/tool calls before the response */}
+                      {message.role === "assistant" && reasoning && (
+                        <Reasoning>
+                          <ReasoningTrigger />
+                          <ReasoningContent>
+                            {reasoning.toolCalls && reasoning.toolCalls.length > 0 && (
+                              <div className="space-y-1">
+                                {reasoning.toolCalls.map((tool, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <span className="text-primary font-medium">{tool.name}:</span>
+                                    <span className="italic">&quot;{tool.input}&quot;</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {reasoning.text && (
+                              <p className="mt-2 whitespace-pre-wrap">{reasoning.text}</p>
+                            )}
+                          </ReasoningContent>
+                        </Reasoning>
+                      )}
                       <MessageResponse>{text}</MessageResponse>
                       {message.role === "assistant" && sources.length > 0 && (
                         <Sources>
@@ -257,7 +375,7 @@ export default function Chat() {
           </PromptInputHeader>
           <PromptInputBody>
             <PromptInputTextarea
-              placeholder="Type your question here..."
+              placeholder="Ask me about PA Medicaid benefits, eligibility, or applications..."
               disabled={isLoading}
             />
           </PromptInputBody>
@@ -288,6 +406,9 @@ export default function Chat() {
             <PromptInputSubmit status={status} disabled={isLoading} />
           </PromptInputFooter>
         </PromptInput>
+          </div>
+        </div>
+        <RightSidebar onHelpTopic={handleSuggestedQuestion} />
       </div>
     </div>
   );
