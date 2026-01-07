@@ -1,5 +1,6 @@
 import type { PromptConfig } from './types';
 import { geminiFlashPrompt } from './gemini-flash';
+import { grok41Prompt } from './grok-4.1';
 import { defaultPrompt } from './default';
 
 /**
@@ -12,6 +13,7 @@ import { defaultPrompt } from './default';
  */
 const PROMPT_CONFIGS: PromptConfig[] = [
   geminiFlashPrompt,
+  grok41Prompt,
   // Add more model-specific prompts here
   defaultPrompt, // Must be last (catches all)
 ];
