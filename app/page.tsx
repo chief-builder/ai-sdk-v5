@@ -5,8 +5,6 @@ import useSWR from "swr";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { CopyIcon, CheckIcon, RefreshCcwIcon, HeartHandshakeIcon } from "lucide-react";
 import { AppHeader } from "@/src/components/app-header";
-import { LeftSidebar } from "@/src/components/left-sidebar";
-import { RightSidebar } from "@/src/components/right-sidebar";
 
 import {
   Conversation,
@@ -250,9 +248,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <AppHeader />
-      <div className="flex flex-1 overflow-hidden">
-        <LeftSidebar onQuickAction={handleSuggestedQuestion} />
-        <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 overflow-hidden">
           <Conversation className="flex-1">
         <ConversationContent className="px-6 py-8">
           {messages.length === 0 ? (
@@ -407,8 +403,6 @@ export default function Chat() {
           </PromptInputFooter>
         </PromptInput>
           </div>
-        </div>
-        <RightSidebar onHelpTopic={handleSuggestedQuestion} />
       </div>
     </div>
   );
