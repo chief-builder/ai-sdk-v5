@@ -55,11 +55,10 @@ import { Loader } from "@/src/components/ai-elements/loader";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Model options for the selector
-// Note: Only Gemini 2.0 Flash is enabled - other free models don't reliably support
-// tool calling in streaming mode via OpenRouter. The prompt infrastructure supports
-// multiple models when they become available (see src/mastra/prompts/).
+// See src/mastra/prompts/ for model-specific prompt configurations
 const models = [
   { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash" },
+  { id: "x-ai/grok-4.1-fast", name: "Grok 4.1 Fast" },
 ];
 
 // Extract sources from message parts and inline citations
